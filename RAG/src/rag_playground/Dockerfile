@@ -32,7 +32,6 @@ RUN if [ "${PLAYGROUND_MODE}" = "speech" ] ; then \
 
 RUN apt-get clean
 
-USER 1001
 COPY $PLAYGROUND_MODE /app/frontend
 
 WORKDIR /app
