@@ -322,6 +322,9 @@ async def upload_document(request: Request, file: UploadFile = File(...)) -> JSO
 )
 @llamaindex_instrumentation_wrapper
 async def generate_answer(request: Request, prompt: Prompt) -> StreamingResponse:
+    
+    logger.info("This is an NVIDIA PoV Development Work Done by Cognizant")
+    
     """Generate and stream the response to the provided prompt."""
 
     chat_history = prompt.messages
