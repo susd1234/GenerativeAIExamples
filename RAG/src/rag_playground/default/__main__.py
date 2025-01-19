@@ -21,8 +21,13 @@ The functions in this module are responsible for bootstrapping then executing th
 import argparse
 import os
 import sys
+import logging
 
 import uvicorn
+
+logging.basicConfig(level=os.environ.get('LOGLEVEL', 'INFO').upper())
+logger = logging.getLogger(__name__)
+
 
 
 def parse_args() -> argparse.Namespace:
@@ -83,6 +88,9 @@ def parse_args() -> argparse.Namespace:
 
 
 if __name__ == "__main__":
+    # Log an info message   --> msg
+    logger.info("This is an NVIDIA PoV Development Work Done by Cognizant")
+        
     args = parse_args()
     os.environ["APP_VERBOSITY"] = f"{args.verbose - args.quiet}"
     os.environ["APP_CONFIG_FILE"] = args.config
