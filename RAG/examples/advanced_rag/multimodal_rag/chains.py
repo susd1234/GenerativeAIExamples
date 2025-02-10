@@ -87,6 +87,17 @@ class MultimodalRAG(BaseExample):
         response = get_llm(
             model_name=RESPONSE_PARAPHRASING_MODEL, cb_handler=self.cb_handler, is_response_generator=True, **kwargs
         ).chat_with_prompt(prompts.get("chat_template", ""), query)
+        logger.info(" ") 
+        logger.info("**************Inference Param*******************************")
+        # def display_kwargs(**kwargs):
+        for key, value in kwargs.items():
+            logger.info(f"{key}: {value}")
+        # logger.info(f"LLM: {model_name}")
+        # logger.info(f"Temperature: {temperature}") 
+        # logger.info(f"top_p: {top_p}") 
+        # logger.info(f"max_tokens: {max_tokens}")  
+        logger.info("**************Inference Param*******************************")  
+        logger.info(" ") 
         return response
 
     def rag_chain(self, query: str, chat_history: List["Message"], **kwargs) -> Generator[str, None, None]:

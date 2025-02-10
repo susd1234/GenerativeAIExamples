@@ -323,16 +323,11 @@ async def upload_document(request: Request, file: UploadFile = File(...)) -> JSO
 @llamaindex_instrumentation_wrapper
 async def generate_answer(request: Request, prompt: Prompt) -> StreamingResponse:
     
+    logger.info(" ") 
     logger.info("************************************************************")
     logger.info("* This is an NVIDIA PoV Development Work Done by Cognizant *")
     logger.info("************************************************************")
     logger.info(" ") 
-    logger.info("**************Inference Param*******************************")
-    logger.info(f"LLM: {model_name}")
-    logger.info(f"Temperature: {temperature}") 
-    logger.info(f"top_p: {top_p}") 
-    logger.info(f"max_tokens: {max_tokens}")  
-    logger.info("**************Inference Param*******************************")  
     
     """Generate and stream the response to the provided prompt."""
 
