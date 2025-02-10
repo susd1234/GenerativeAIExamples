@@ -90,7 +90,7 @@ class Prompt(BaseModel):
     )
     use_knowledge_base: bool = Field(..., description="Whether to use a knowledge base")
     temperature: float = Field(
-        0.2,
+        0.9,  # default value=0.2  -- Susan
         description="The sampling temperature to use for text generation. The higher the temperature value is, the less deterministic the output text will be. It is not recommended to modify both temperature and top_p in the same call.",
         ge=0.1,
         le=1.0,
