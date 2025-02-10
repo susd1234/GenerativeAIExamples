@@ -350,9 +350,32 @@ async def generate_answer(request: Request, prompt: Prompt) -> StreamingResponse
         if prompt.use_knowledge_base:
             logger.info("Knowledge base is enabled. Using rag chain for response generation.")
             generator = example.rag_chain(query=last_user_message, chat_history=chat_history, **llm_settings)
+            
+            logger.info(" ") 
+            logger.info("**************KB - Inference Param*******************************")
+            # def display_kwargs(**kwargs):
+            for key, value in llm_settings.items():
+                logger.info(f"{key}: {value}")
+            # logger.info(f"LLM: {model_name}")
+            # logger.info(f"Temperature: {temperature}") 
+            # logger.info(f"top_p: {top_p}") 
+            # logger.info(f"max_tokens: {max_tokens}")  
+            logger.info("**************KB - Inference Param*******************************")  
+            logger.info(" ") 
 
         else:
             generator = example.llm_chain(query=last_user_message, chat_history=chat_history, **llm_settings)
+            logger.info(" ") 
+            logger.info("**************Chat - Inference Param*******************************")
+            # def display_kwargs(**kwargs):
+            for key, value in llm_settings.items():
+                logger.info(f"{key}: {value}")
+            # logger.info(f"LLM: {model_name}")
+            # logger.info(f"Temperature: {temperature}") 
+            # logger.info(f"top_p: {top_p}") 
+            # logger.info(f"max_tokens: {max_tokens}")  
+            logger.info("**************Chat - Inference Param*******************************")  
+            logger.info(" ") 
 
         def response_generator():
             """Convert generator streaming response into `data: ChainResponse` format for chunk 
