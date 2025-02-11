@@ -90,7 +90,7 @@ class Prompt(BaseModel):
     )
     use_knowledge_base: bool = Field(..., description="Whether to use a knowledge base")
     temperature: float = Field(
-        0.9,  # default value=0.2  -- Susan
+        0.9,  # default value=0.2  -- #Susan
         description="The sampling temperature to use for text generation. The higher the temperature value is, the less deterministic the output text will be. It is not recommended to modify both temperature and top_p in the same call.",
         ge=0.1,
         le=1.0,
@@ -323,11 +323,13 @@ async def upload_document(request: Request, file: UploadFile = File(...)) -> JSO
 @llamaindex_instrumentation_wrapper
 async def generate_answer(request: Request, prompt: Prompt) -> StreamingResponse:
     
+    #Susan
     logger.info(" ") 
     logger.info("************************************************************")
     logger.info("* This is an NVIDIA PoV Development Work Done by Cognizant *")
     logger.info("************************************************************")
     logger.info(" ") 
+    #Susan
     
     """Generate and stream the response to the provided prompt."""
 
@@ -351,6 +353,7 @@ async def generate_answer(request: Request, prompt: Prompt) -> StreamingResponse
             logger.info("Knowledge base is enabled. Using rag chain for response generation.")
             generator = example.rag_chain(query=last_user_message, chat_history=chat_history, **llm_settings)
             
+            #Susan 
             logger.info(" ") 
             logger.info("**************KB - Inference Param*******************************")
             # def display_kwargs(**kwargs):
@@ -362,9 +365,11 @@ async def generate_answer(request: Request, prompt: Prompt) -> StreamingResponse
             # logger.info(f"max_tokens: {max_tokens}")  
             logger.info("**************KB - Inference Param*******************************")  
             logger.info(" ") 
+            #Susan
 
         else:
             generator = example.llm_chain(query=last_user_message, chat_history=chat_history, **llm_settings)
+            #Susan
             logger.info(" ") 
             logger.info("**************Chat - Inference Param*******************************")
             # def display_kwargs(**kwargs):
@@ -376,6 +381,7 @@ async def generate_answer(request: Request, prompt: Prompt) -> StreamingResponse
             # logger.info(f"max_tokens: {max_tokens}")  
             logger.info("**************Chat - Inference Param*******************************")  
             logger.info(" ") 
+            #Susan
 
         def response_generator():
             """Convert generator streaming response into `data: ChainResponse` format for chunk 
