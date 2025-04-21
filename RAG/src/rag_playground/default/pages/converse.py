@@ -41,7 +41,8 @@ def build_page(client: chat_client.ChatClient) -> gr.Blocks:
     """Build the gradio page to be mounted in the frame."""
     kui_theme, kui_styles = assets.load_theme("kaizen")
 
-    with gr.Blocks(title=TITLE, theme=kui_theme, css=kui_styles + _LOCAL_CSS) as page:
+    # Handle theme parameter
+    with gr.Blocks(title=TITLE, theme=kui_theme, css=kui_styles + _LOCAL_CSS, theme_mode="light") as page:
 
         # create the page header
         gr.Markdown(f"# {TITLE}")
@@ -50,17 +51,20 @@ def build_page(client: chat_client.ChatClient) -> gr.Blocks:
         with gr.Row(equal_height=True):
             chatbot = gr.Chatbot(scale=2, label=client.model_name)
             latest_response = gr.Textbox(visible=False)
-            context = gr.JSON(scale=1, label="Knowledge Base Context", visible=False, elem_id="contextbox",)
+            context = gr.JSON(scale=1, label="Knowledge Base Context",
+                              visible=False, elem_id="contextbox",)
 
         # check boxes
         with gr.Row():
             with gr.Column(scale=10, min_width=150):
-                kb_checkbox = gr.Checkbox(label="Use knowledge base", info="", value=False)
+                kb_checkbox = gr.Checkbox(
+                    label="Use knowledge base", info="", value=False)
 
         # text input boxes
         with gr.Row():
             with gr.Column(scale=10, min_width=500):
-                msg = gr.Textbox(show_label=False, placeholder="Enter text and press ENTER", container=False,)
+                msg = gr.Textbox(
+                    show_label=False, placeholder="Enter text and press ENTER", container=False,)
 
         # user feedback
         with gr.Row():
@@ -85,13 +89,17 @@ def build_page(client: chat_client.ChatClient) -> gr.Blocks:
                 ctx_hide: gr.update(visible=out[2]),
             }
 
-        ctx_show.click(_toggle_context, [ctx_show], [context, ctx_show, ctx_hide])
-        ctx_hide.click(_toggle_context, [ctx_hide], [context, ctx_show, ctx_hide])
+        ctx_show.click(_toggle_context, [ctx_show], [
+                       context, ctx_show, ctx_hide])
+        ctx_hide.click(_toggle_context, [ctx_hide], [
+                       context, ctx_show, ctx_hide])
 
         # form actions
         _my_build_stream = functools.partial(_stream_predict, client)
-        msg.submit(_my_build_stream, [kb_checkbox, msg, chatbot], [msg, chatbot, context, latest_response])
-        submit_btn.click(_my_build_stream, [kb_checkbox, msg, chatbot], [msg, chatbot, context, latest_response])
+        msg.submit(_my_build_stream, [kb_checkbox, msg, chatbot], [
+                   msg, chatbot, context, latest_response])
+        submit_btn.click(_my_build_stream, [kb_checkbox, msg, chatbot], [
+                         msg, chatbot, context, latest_response])
 
     page.queue()
     return page
@@ -104,7 +112,8 @@ def _stream_predict(
     chunks = ""
     chat_history = chat_history or []
     _LOGGER.info(
-        "processing inference request - %s", str({"prompt": question, "use_knowledge_base": use_knowledge_base}),
+        "processing inference request - %s", str(
+            {"prompt": question, "use_knowledge_base": use_knowledge_base}),
     )
 
     documents: Union[None, List[Dict[str, Union[str, float]]]] = None

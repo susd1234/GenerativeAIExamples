@@ -37,7 +37,7 @@ from starlette.status import HTTP_422_UNPROCESSABLE_ENTITY
 
 from RAG.src.chain_server.tracing import llamaindex_instrumentation_wrapper
 
-logging.basicConfig(level=os.environ.get('LOGLEVEL', 'INFO').upper())
+logging.basicConfig(level=os.environ.get("LOGLEVEL", "INFO").upper())
 logger = logging.getLogger(__name__)
 
 # create the FastAPI server
@@ -46,7 +46,11 @@ app = FastAPI()
 # Allow access in browser from RAG UI and Storybook (development)
 origins = ["*"]
 app.add_middleware(
-    CORSMiddleware, allow_origins=origins, allow_credentials=False, allow_methods=["*"], allow_headers=["*"],
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=False,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 EXAMPLE_DIR = "RAG/examples/"
@@ -56,27 +60,31 @@ class Message(BaseModel):
     """Definition of the Chat Message type."""
 
     role: str = Field(
-        description="Role for a message AI, User and System", default="user", max_length=256, pattern=r'[\s\S]*'
+        description="Role for a message AI, User and System",
+        default="user",
+        max_length=256,
+        pattern=r"[\s\S]*",
     )
     content: str = Field(
         description="The input query/prompt to the pipeline.",
         default="I am going to Paris, what should I see?",
         max_length=131072,
-        pattern=r'[\s\S]*',
+        pattern=r"[\s\S]*",
     )
 
-    @validator('role')
+    @validator("role")
     def validate_role(cls, value):
-        """ Field validator function to validate values of the field role"""
+        """Field validator function to validate values of the field role"""
         value = bleach.clean(value, strip=True)
-        valid_roles = {'user', 'assistant', 'system'}
+        valid_roles = {"user", "assistant", "system"}
         if value.lower() not in valid_roles:
-            raise ValueError("Role must be one of 'user', 'assistant', or 'system'")
+            raise ValueError(
+                "Role must be one of 'user', 'assistant', or 'system'")
         return value.lower()
 
-    @validator('content')
+    @validator("content")
     def sanitize_content(cls, v):
-        """ Feild validator function to santize user populated feilds from HTML"""
+        """Feild validator function to sanitize user populated fields from HTML"""
         return bleach.clean(v, strip=True)
 
 
@@ -88,7 +96,8 @@ class Prompt(BaseModel):
         description="A list of messages comprising the conversation so far. The roles of the messages must be alternating between user and assistant. The last input message should have role user. A message with the the system role is optional, and must be the very first message if it is present.",
         max_items=50000,
     )
-    use_knowledge_base: bool = Field(..., description="Whether to use a knowledge base")
+    use_knowledge_base: bool = Field(...,
+                                     description="Whether to use a knowledge base")
     temperature: float = Field(
         0.9,  # default value=0.2  -- #Susan
         description="The sampling temperature to use for text generation. The higher the temperature value is, the less deterministic the output text will be. It is not recommended to modify both temperature and top_p in the same call.",
@@ -110,45 +119,45 @@ class Prompt(BaseModel):
     )
     # seed: int = Field(42, description="If specified, our system will make a best effort to sample deterministically, such that repeated requests with the same seed and parameters should return the same result.")
     # bad: List[str] = Field(None, description="A word or list of words not to use. The words are case sensitive.")
-    stop: List[constr(max_length=256, pattern=r'[\s\S]*')] = Field(
+    stop: List[constr(max_length=256, pattern=r"[\s\S]*")] = Field(
         description="A string or a list of strings where the API will stop generating further tokens. The returned text will not contain the stop sequence.",
         max_items=256,
         default=[],
     )
     # stream: bool = Field(True, description="If set, partial message deltas will be sent. Tokens will be sent as data-only server-sent events (SSE) as they become available (JSON responses are prefixed by data:), with the stream terminated by a data: [DONE] message.")
 
-    @validator('use_knowledge_base')
+    @validator("use_knowledge_base")
     def sanitize_use_kb(cls, v):
-        """ Feild validator function to santize user populated feilds from HTML"""
+        """Feild validator function to santize user populated feilds from HTML"""
         v = bleach.clean(str(v), strip=True)
         try:
             return {"True": True, "False": False}[v]
         except KeyError:
             raise ValueError("use_knowledge_base must be a boolean value")
 
-    @validator('temperature')
+    @validator("temperature")
     def sanitize_temperature(cls, v):
-        """ Feild validator function to santize user populated feilds from HTML"""
+        """Feild validator function to santize user populated feilds from HTML"""
         return float(bleach.clean(str(v), strip=True))
 
-    @validator('top_p')
+    @validator("top_p")
     def sanitize_top_p(cls, v):
-        """ Feild validator function to santize user populated feilds from HTML"""
+        """Feild validator function to santize user populated feilds from HTML"""
         return float(bleach.clean(str(v), strip=True))
 
 
 class ChainResponseChoices(BaseModel):
-    """ Definition of Chain response choices"""
+    """Definition of Chain response choices"""
 
     index: int = Field(default=0, ge=0, le=256, format="int64")
     message: Message = Field(default=Message(role="assistant", content=""))
-    finish_reason: str = Field(default="", max_length=4096, pattern=r'[\s\S]*')
+    finish_reason: str = Field(default="", max_length=4096, pattern=r"[\s\S]*")
 
 
 class ChainResponse(BaseModel):
     """Definition of Chain APIs resopnse data type"""
 
-    id: str = Field(default="", max_length=100000, pattern=r'[\s\S]*')
+    id: str = Field(default="", max_length=100000, pattern=r"[\s\S]*")
     choices: List[ChainResponseChoices] = Field(default=[], max_items=256)
 
 
@@ -158,7 +167,7 @@ class DocumentSearch(BaseModel):
     query: str = Field(
         description="The content or keywords to search for within documents.",
         max_length=131072,
-        pattern=r'[\s\S]*',
+        pattern=r"[\s\S]*",
         default="",
     )
     top_k: int = Field(
@@ -174,10 +183,16 @@ class DocumentChunk(BaseModel):
     """Represents a chunk of a document."""
 
     content: str = Field(
-        description="The content of the document chunk.", max_length=131072, pattern=r'[\s\S]*', default=""
+        description="The content of the document chunk.",
+        max_length=131072,
+        pattern=r"[\s\S]*",
+        default="",
     )
     filename: str = Field(
-        description="The name of the file the chunk belongs to.", max_length=4096, pattern=r'[\s\S]*', default=""
+        description="The name of the file the chunk belongs to.",
+        max_length=4096,
+        pattern=r"[\s\S]*",
+        default="",
     )
     score: float = Field(..., description="The relevance score of the chunk.")
 
@@ -185,19 +200,21 @@ class DocumentChunk(BaseModel):
 class DocumentSearchResponse(BaseModel):
     """Represents a response from a document search."""
 
-    chunks: List[DocumentChunk] = Field(..., description="List of document chunks.", max_items=256)
+    chunks: List[DocumentChunk] = Field(
+        ..., description="List of document chunks.", max_items=256
+    )
 
 
 class DocumentsResponse(BaseModel):
     """Represents the response containing a list of documents."""
 
-    documents: List[constr(max_length=131072, pattern=r'[\s\S]*')] = Field(
+    documents: List[constr(max_length=131072, pattern=r"[\s\S]*")] = Field(
         description="List of filenames.", max_items=1000000, default=[]
     )
 
 
 class HealthResponse(BaseModel):
-    message: str = Field(max_length=4096, pattern=r'[\s\S]*', default="")
+    message: str = Field(max_length=4096, pattern=r"[\s\S]*", default="")
 
 
 @app.on_event("startup")
@@ -208,7 +225,9 @@ def import_example() -> None:
     """
 
     # path of the example directory, to check for chain implementation
-    file_location = os.path.join(EXAMPLE_DIR, os.environ.get("EXAMPLE_PATH", "basic_rag/llamaindex"))
+    file_location = os.path.join(
+        EXAMPLE_DIR, os.environ.get("EXAMPLE_PATH", "basic_rag/llamaindex")
+    )
 
     # Walk through the directory to find the RAG chains and store it's class
     for root, dirs, files in os.walk(file_location):
@@ -217,7 +236,9 @@ def import_example() -> None:
                 continue
 
             # Import the specified file dynamically
-            spec = importlib.util.spec_from_file_location(name="example", location=os.path.join(root, file))
+            spec = importlib.util.spec_from_file_location(
+                name="example", location=os.path.join(root, file)
+            )
             module = importlib.util.module_from_spec(spec)
             spec.loader.exec_module(module)
 
@@ -225,7 +246,9 @@ def import_example() -> None:
             for name, _ in getmembers(module, isclass):
                 try:
                     cls = getattr(module, name)
-                    if set(["ingest_docs", "llm_chain", "rag_chain"]).issubset(set(dir(cls))):
+                    if set(["ingest_docs", "llm_chain", "rag_chain"]).issubset(
+                        set(dir(cls))
+                    ):
                         if name == "BaseExample":
                             continue
                         # Try creating example class instance, store it in app.example if successful
@@ -233,13 +256,18 @@ def import_example() -> None:
                         app.example = cls
                         return
                 except:
-                    raise ValueError(f"Class {name} is not implemented and could not be instantiated.")
+                    raise ValueError(
+                        f"Class {name} is not implemented and could not be instantiated."
+                    )
 
-    raise NotImplementedError(f"Could not find a valid example class in {EXAMPLE_DIR}")
+    raise NotImplementedError(
+        f"Could not find a valid example class in {EXAMPLE_DIR}")
 
 
 @app.exception_handler(RequestValidationError)
-async def request_validation_exception_handler(request: Request, exc: RequestValidationError) -> JSONResponse:
+async def request_validation_exception_handler(
+    request: Request, exc: RequestValidationError
+) -> JSONResponse:
     return JSONResponse(
         status_code=HTTP_422_UNPROCESSABLE_ENTITY,
         content={"detail": jsonable_encoder(exc.errors(), exclude={"input"})},
@@ -252,7 +280,11 @@ async def request_validation_exception_handler(request: Request, exc: RequestVal
     responses={
         500: {
             "description": "Internal Server Error",
-            "content": {"application/json": {"example": {"detail": "Internal server error occurred"}}},
+            "content": {
+                "application/json": {
+                    "example": {"detail": "Internal server error occurred"}
+                }
+            },
         }
     },
 )
@@ -272,12 +304,18 @@ def health_check():
     responses={
         500: {
             "description": "Internal Server Error",
-            "content": {"application/json": {"example": {"detail": "Internal server error occurred"}}},
+            "content": {
+                "application/json": {
+                    "example": {"detail": "Internal server error occurred"}
+                }
+            },
         }
     },
 )
 @llamaindex_instrumentation_wrapper
-async def upload_document(request: Request, file: UploadFile = File(...)) -> JSONResponse:
+async def upload_document(
+    request: Request, file: UploadFile = File(...)
+) -> JSONResponse:
     """Upload a document to the vector store."""
 
     if not file.filename:
@@ -298,7 +336,9 @@ async def upload_document(request: Request, file: UploadFile = File(...)) -> JSO
 
         app.example().ingest_docs(file_path, upload_file)
 
-        return JSONResponse(content={"message": "File uploaded successfully"}, status_code=200)
+        return JSONResponse(
+            content={"message": "File uploaded successfully"}, status_code=200
+        )
 
     except Exception as e:
         logger.error(
@@ -316,76 +356,104 @@ async def upload_document(request: Request, file: UploadFile = File(...)) -> JSO
     responses={
         500: {
             "description": "Internal Server Error",
-            "content": {"application/json": {"example": {"detail": "Internal server error occurred"}}},
+            "content": {
+                "application/json": {
+                    "example": {"detail": "Internal server error occurred"}
+                }
+            },
         }
     },
 )
 @llamaindex_instrumentation_wrapper
 async def generate_answer(request: Request, prompt: Prompt) -> StreamingResponse:
-    
-    #Susan
-    logger.info(" ") 
+
+    # Susan
+    logger.info(" ")
     logger.info("************************************************************")
     logger.info("* This is an NVIDIA PoV Development Work Done by Cognizant *")
     logger.info("************************************************************")
-    logger.info(" ") 
-    #Susan
-    
+    logger.info(" ")
+    # Susan
+
     """Generate and stream the response to the provided prompt."""
 
     chat_history = prompt.messages
     # The last user message will be the query for the rag or llm chain
-    last_user_message = next((message.content for message in reversed(chat_history) if message.role == 'user'), None)
+    last_user_message = next(
+        (
+            message.content
+            for message in reversed(chat_history)
+            if message.role == "user"
+        ),
+        None,
+    )
 
     # Find and remove the last user message if present
     for i in reversed(range(len(chat_history))):
-        if chat_history[i].role == 'user':
+        if chat_history[i].role == "user":
             del chat_history[i]
             break  # Remove only the last user message
 
     # All the other information from the prompt like the temperature, top_p etc., are llm_settings
-    llm_settings = {key: value for key, value in vars(prompt).items() if key not in ['messages', 'use_knowledge_base']}
+    llm_settings = {
+        key: value
+        for key, value in vars(prompt).items()
+        if key not in ["messages", "use_knowledge_base"]
+    }
     try:
         example = app.example()
         generator = None
         # call rag_chain if use_knowledge_base is enabled
         if prompt.use_knowledge_base:
-            logger.info("Knowledge base is enabled. Using rag chain for response generation.")
-            generator = example.rag_chain(query=last_user_message, chat_history=chat_history, **llm_settings)
-            
-            #Susan 
-            logger.info(" ") 
-            logger.info("**************KB - Inference Param*******************************")
+            logger.info(
+                "Knowledge base is enabled. Using rag chain for response generation."
+            )
+            generator = example.rag_chain(
+                query=last_user_message, chat_history=chat_history, **llm_settings
+            )
+
+            # Susan
+            logger.info(" ")
+            logger.info(
+                "**************KB - Inference Param*******************************"
+            )
             # def display_kwargs(**kwargs):
             for key, value in llm_settings.items():
                 logger.info(f"{key}: {value}")
             # logger.info(f"LLM: {model_name}")
-            # logger.info(f"Temperature: {temperature}") 
-            # logger.info(f"top_p: {top_p}") 
-            # logger.info(f"max_tokens: {max_tokens}")  
-            logger.info("**************KB - Inference Param*******************************")  
-            logger.info(" ") 
-            #Susan
+            # logger.info(f"Temperature: {temperature}")
+            # logger.info(f"top_p: {top_p}")
+            # logger.info(f"max_tokens: {max_tokens}")
+            logger.info(
+                "**************KB - Inference Param*******************************"
+            )
+            logger.info(" ")
+            # Susan
 
         else:
-            generator = example.llm_chain(query=last_user_message, chat_history=chat_history, **llm_settings)
-            #Susan
-            logger.info(" ") 
-            logger.info("**************Chat - Inference Param*******************************")
+            generator = example.llm_chain(
+                query=last_user_message, chat_history=chat_history, **llm_settings
+            )
+            # Susan
+            logger.info(" ")
+            logger.info(
+                "**************Chat - Inference Param*******************************"
+            )
             # def display_kwargs(**kwargs):
             for key, value in llm_settings.items():
                 logger.info(f"{key}: {value}")
             # logger.info(f"LLM: {model_name}")
-            # logger.info(f"Temperature: {temperature}") 
-            # logger.info(f"top_p: {top_p}") 
-            # logger.info(f"max_tokens: {max_tokens}")  
-            logger.info("**************Chat - Inference Param*******************************")  
-            logger.info(" ") 
-            #Susan
+            # logger.info(f"Temperature: {temperature}")
+            # logger.info(f"top_p: {top_p}")
+            # logger.info(f"max_tokens: {max_tokens}")
+            logger.info(
+                "**************Chat - Inference Param*******************************"
+            )
+            logger.info(" ")
+            # Susan
 
         def response_generator():
-            """Convert generator streaming response into `data: ChainResponse` format for chunk 
-            """
+            """Convert generator streaming response into `data: ChainResponse` format for chunk"""
             # unique response id for every query
             resp_id = str(uuid4())
             if generator:
@@ -393,7 +461,9 @@ async def generate_answer(request: Request, prompt: Prompt) -> StreamingResponse
                 # Create ChainResponse object for every token generated
                 for chunk in generator:
                     chain_response = ChainResponse()
-                    response_choice = ChainResponseChoices(index=0, message=Message(role="assistant", content=chunk))
+                    response_choice = ChainResponseChoices(
+                        index=0, message=Message(role="assistant", content=chunk)
+                    )
                     chain_response.id = resp_id
                     chain_response.choices.append(response_choice)
                     logger.debug(response_choice)
@@ -417,26 +487,36 @@ async def generate_answer(request: Request, prompt: Prompt) -> StreamingResponse
         exception_msg = "Error from milvus server. Please ensure you have ingested some documents. Please check chain-server logs for more details."
         chain_response = ChainResponse()
         response_choice = ChainResponseChoices(
-            index=0, message=Message(role="assistant", content=exception_msg), finish_reason="[DONE]"
+            index=0,
+            message=Message(role="assistant", content=exception_msg),
+            finish_reason="[DONE]",
         )
         chain_response.choices.append(response_choice)
         logger.error(
             f"Error from Milvus database in /generate endpoint. Please ensure you have ingested some documents. Error details: {e}"
         )
         return StreamingResponse(
-            iter(["data: " + str(chain_response.json()) + "\n\n"]), media_type="text/event-stream", status_code=500
+            iter(["data: " + str(chain_response.json()) + "\n\n"]),
+            media_type="text/event-stream",
+            status_code=500,
         )
 
     except Exception as e:
-        exception_msg = "Error from chain server. Please check chain-server logs for more details."
+        exception_msg = (
+            "Error from chain server. Please check chain-server logs for more details."
+        )
         chain_response = ChainResponse()
         response_choice = ChainResponseChoices(
-            index=0, message=Message(role="assistant", content=exception_msg), finish_reason="[DONE]"
+            index=0,
+            message=Message(role="assistant", content=exception_msg),
+            finish_reason="[DONE]",
         )
         chain_response.choices.append(response_choice)
         logger.error(f"Error from /generate endpoint. Error details: {e}")
         return StreamingResponse(
-            iter(["data: " + str(chain_response.json()) + "\n\n"]), media_type="text/event-stream", status_code=500
+            iter(["data: " + str(chain_response.json()) + "\n\n"]),
+            media_type="text/event-stream",
+            status_code=500,
         )
 
 
@@ -446,12 +526,18 @@ async def generate_answer(request: Request, prompt: Prompt) -> StreamingResponse
     responses={
         500: {
             "description": "Internal Server Error",
-            "content": {"application/json": {"example": {"detail": "Internal server error occurred"}}},
+            "content": {
+                "application/json": {
+                    "example": {"detail": "Internal server error occurred"}
+                }
+            },
         }
     },
 )
 @llamaindex_instrumentation_wrapper
-async def document_search(request: Request, data: DocumentSearch) -> Dict[str, List[Dict[str, Any]]]:
+async def document_search(
+    request: Request, data: DocumentSearch
+) -> Dict[str, List[Dict[str, Any]]]:
     """Search for the most relevant documents for the given search parameters."""
 
     try:
@@ -461,17 +547,30 @@ async def document_search(request: Request, data: DocumentSearch) -> Dict[str, L
             chunks = []
             # Format top_k result in response format
             for entry in search_result:
-                content = entry.get("content", "")  # Default to empty string if "content" key doesn't exist
-                source = entry.get("source", "")  # Default to empty string if "source" key doesn't exist
-                score = entry.get("score", 0.0)  # Default to 0.0 if "score" key doesn't exist
-                chunk = DocumentChunk(content=content, filename=source, document_id="", score=score)
+                content = entry.get(
+                    "content", ""
+                )  # Default to empty string if "content" key doesn't exist
+                source = entry.get(
+                    "source", ""
+                )  # Default to empty string if "source" key doesn't exist
+                score = entry.get(
+                    "score", 0.0
+                )  # Default to 0.0 if "score" key doesn't exist
+                chunk = DocumentChunk(
+                    content=content, filename=source, document_id="", score=score
+                )
                 chunks.append(chunk)
             return DocumentSearchResponse(chunks=chunks)
-        raise NotImplementedError("Example class has not implemented the document_search method.")
+        raise NotImplementedError(
+            "Example class has not implemented the document_search method."
+        )
 
     except Exception as e:
         logger.error(f"Error from POST /search endpoint. Error details: {e}")
-        return JSONResponse(content={"message": "Error occurred while searching documents."}, status_code=500)
+        return JSONResponse(
+            content={"message": "Error occurred while searching documents."},
+            status_code=500,
+        )
 
 
 @app.get(
@@ -480,7 +579,11 @@ async def document_search(request: Request, data: DocumentSearch) -> Dict[str, L
     responses={
         500: {
             "description": "Internal Server Error",
-            "content": {"application/json": {"example": {"detail": "Internal server error occurred"}}},
+            "content": {
+                "application/json": {
+                    "example": {"detail": "Internal server error occurred"}
+                }
+            },
         }
     },
 )
@@ -493,11 +596,16 @@ async def get_documents(request: Request) -> DocumentsResponse:
             documents = example.get_documents()
             return DocumentsResponse(documents=documents)
         else:
-            raise NotImplementedError("Example class has not implemented the get_documents method.")
+            raise NotImplementedError(
+                "Example class has not implemented the get_documents method."
+            )
 
     except Exception as e:
         logger.error(f"Error from GET /documents endpoint. Error details: {e}")
-        return JSONResponse(content={"message": "Error occurred while fetching documents."}, status_code=500)
+        return JSONResponse(
+            content={"message": "Error occurred while fetching documents."},
+            status_code=500,
+        )
 
 
 @app.delete(
@@ -505,7 +613,11 @@ async def get_documents(request: Request) -> DocumentsResponse:
     responses={
         500: {
             "description": "Internal Server Error",
-            "content": {"application/json": {"example": {"detail": "Internal server error occurred"}}},
+            "content": {
+                "application/json": {
+                    "example": {"detail": "Internal server error occurred"}
+                }
+            },
         }
     },
 )
@@ -518,10 +630,18 @@ async def delete_document(request: Request, filename: str) -> JSONResponse:
             status = example.delete_documents([filename])
             if not status:
                 raise Exception(f"Error in deleting document {filename}")
-            return JSONResponse(content={"message": f"Document {filename} deleted successfully"}, status_code=200)
+            return JSONResponse(
+                content={"message": f"Document {filename} deleted successfully"},
+                status_code=200,
+            )
 
-        raise NotImplementedError("Example class has not implemented the delete_document method.")
+        raise NotImplementedError(
+            "Example class has not implemented the delete_document method."
+        )
 
     except Exception as e:
-        logger.error(f"Error from DELETE /documents endpoint. Error details: {e}")
-        return JSONResponse(content={"message": f"Error deleting document {filename}"}, status_code=500)
+        logger.error(
+            f"Error from DELETE /documents endpoint. Error details: {e}")
+        return JSONResponse(
+            content={"message": f"Error deleting document {filename}"}, status_code=500
+        )
