@@ -41,8 +41,7 @@ def build_page(client: chat_client.ChatClient) -> gr.Blocks:
     """Build the gradio page to be mounted in the frame."""
     kui_theme, kui_styles = assets.load_theme("kaizen")
 
-    # Handle theme parameter
-    with gr.Blocks(title=TITLE, theme=kui_theme, css=kui_styles + _LOCAL_CSS, theme_mode="light") as page:
+    with gr.Blocks(title=TITLE, theme=kui_theme, css=kui_styles + _LOCAL_CSS) as page:
 
         # create the page header
         gr.Markdown(f"# {TITLE}")
