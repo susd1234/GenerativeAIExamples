@@ -41,8 +41,14 @@ def build_page(client: chat_client.ChatClient) -> gr.Blocks:
     """Build the gradio page to be mounted in the frame."""
     kui_theme, kui_styles = assets.load_theme("kaizen")
 
-    with gr.Blocks(title=TITLE, theme=kui_theme, css=kui_styles + _LOCAL_CSS) as page:
+    # Configure page with proper theme handling
+    blocks = gr.Blocks(
+        title=TITLE,
+        theme=kui_theme,
+        css=kui_styles + _LOCAL_CSS,
+    )
 
+    with blocks as page:
         # create the page header
         gr.Markdown(f"# {TITLE}")
 
@@ -67,9 +73,6 @@ def build_page(client: chat_client.ChatClient) -> gr.Blocks:
 
         # user feedback
         with gr.Row():
-            # _ = gr.Button(value="👍  Upvote")
-            # _ = gr.Button(value="👎  Downvote")
-            # _ = gr.Button(value="⚠️  Flag")
             submit_btn = gr.Button(value="Submit")
             _ = gr.ClearButton(msg)
             _ = gr.ClearButton([msg, chatbot], value="Clear History")
