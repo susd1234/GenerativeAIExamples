@@ -36,7 +36,8 @@ def build_page(client: chat_client.ChatClient) -> gr.Blocks:
         gr.Markdown(f"# {TITLE}")
 
         with gr.Row():
-            upload_button = gr.UploadButton("Add File", file_types=["pdf"], file_count="multiple")
+            upload_button = gr.UploadButton(
+                "Add File", file_types=["pdf", "txt", "ppt", "pptx", "jpeg", "jpg", "png"], file_count="multiple")
         with gr.Row():
             file_output = gr.File()
 
@@ -51,21 +52,25 @@ def build_page(client: chat_client.ChatClient) -> gr.Blocks:
 
         with gr.Row():
             buffer_textbox = gr.Textbox(interactive=False, visible=False)
-            message_textbox = gr.Textbox(label="Message", interactive=False, visible=True)
+            message_textbox = gr.Textbox(
+                label="Message", interactive=False, visible=True)
 
         with gr.Row():
             delete_button = gr.Button("Delete")
 
         # form actions
-        # Upload dutton action
-        upload_button.upload(lambda files: upload_file(files, client), upload_button, file_output)
+        # Upload button action
+        upload_button.upload(lambda files: upload_file(
+            files, client), upload_button, file_output)
 
         # Files dataframe action
-        files_df.select(return_selected_file, inputs=[files_df], outputs=[buffer_textbox])
+        files_df.select(return_selected_file, inputs=[
+                        files_df], outputs=[buffer_textbox])
 
         # Delete button action
         partial_delete_file = partial(delete_file, client=client)
-        delete_button.click(fn=partial_delete_file, inputs=buffer_textbox, outputs=message_textbox)
+        delete_button.click(fn=partial_delete_file,
+                            inputs=buffer_textbox, outputs=message_textbox)
 
     page.queue()
     return page
