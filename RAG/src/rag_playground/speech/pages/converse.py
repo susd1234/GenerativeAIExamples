@@ -59,8 +59,10 @@ try:
         use_ssl = True
         metadata_tts.append(("function-id", RIVA_TTS_FUNCTION_ID))
 
-    auth_tts = riva.client.Auth(None, use_ssl=use_ssl, uri=RIVA_API_URI, metadata_args=metadata_tts)
-    auth_asr = riva.client.Auth(None, use_ssl=use_ssl, uri=RIVA_API_URI, metadata_args=metadata_asr)
+    auth_tts = riva.client.Auth(
+        None, use_ssl=use_ssl, uri=RIVA_API_URI, metadata_args=metadata_tts)
+    auth_asr = riva.client.Auth(
+        None, use_ssl=use_ssl, uri=RIVA_API_URI, metadata_args=metadata_asr)
     _LOGGER.info('Created riva.client.Auth success')
 except:
     _LOGGER.info('Error creating riva.client.Auth')
@@ -83,9 +85,11 @@ def build_page(client: chat_client.ChatClient) -> gr.Blocks:
 
         # chat logs
         with gr.Row(equal_height=True):
-            chatbot = gr.Chatbot(scale=2, label=client.model_name)
+            chatbot = gr.Chatbot(
+                scale=2, label=client.model_name, type="messages")
             latest_response = gr.Textbox(visible=False)
-            context = gr.JSON(scale=1, label="Knowledge Base Context", visible=False, elem_id="contextbox",)
+            context = gr.JSON(scale=1, label="Knowledge Base Context",
+                              visible=False, elem_id="contextbox",)
 
         # TTS output box
         # visible so that users can stop or replay playback
@@ -102,9 +106,11 @@ def build_page(client: chat_client.ChatClient) -> gr.Blocks:
         # check boxes
         with gr.Row():
             with gr.Column(scale=10, min_width=150):
-                kb_checkbox = gr.Checkbox(label="Use knowledge base", info="", value=False)
+                kb_checkbox = gr.Checkbox(
+                    label="Use knowledge base", info="", value=False)
             with gr.Column(scale=10, min_width=150):
-                tts_checkbox = gr.Checkbox(label="Enable TTS output", info="", value=False)
+                tts_checkbox = gr.Checkbox(
+                    label="Enable TTS output", info="", value=False)
 
         # dropdowns
         with gr.Accordion("ASR and TTS Settings"):
@@ -120,7 +126,8 @@ def build_page(client: chat_client.ChatClient) -> gr.Blocks:
                 all_voices = []
                 try:
                     for model in tts_utils.TTS_MODELS:
-                        all_voices.extend(tts_utils.TTS_MODELS[model]['voices'])
+                        all_voices.extend(
+                            tts_utils.TTS_MODELS[model]['voices'])
                     default_voice = tts_utils.TTS_MODELS[tts_language_list[0]]['voices'][0]
                 except:
                     all_voices.append("No TTS voices available")
@@ -132,7 +139,8 @@ def build_page(client: chat_client.ChatClient) -> gr.Blocks:
         # audio and text input boxes
         with gr.Row():
             with gr.Column(scale=10, min_width=500):
-                msg = gr.Textbox(show_label=False, placeholder="Enter text and press ENTER", container=False,)
+                msg = gr.Textbox(
+                    show_label=False, placeholder="Enter text and press ENTER", container=False,)
             # For (at least) Gradio 3.39.0 and lower, the first argument
             # in the list below is named `source`. If not None, it must
             # be a single string, namely either "upload" or "microphone".
@@ -173,30 +181,39 @@ def build_page(client: chat_client.ChatClient) -> gr.Blocks:
                 ctx_hide: gr.update(visible=out[2]),
             }
 
-        ctx_show.click(_toggle_context, [ctx_show], [context, ctx_show, ctx_hide])
-        ctx_hide.click(_toggle_context, [ctx_hide], [context, ctx_show, ctx_hide])
+        ctx_show.click(_toggle_context, [ctx_show], [
+                       context, ctx_show, ctx_hide])
+        ctx_hide.click(_toggle_context, [ctx_hide], [
+                       context, ctx_show, ctx_hide])
 
         # form actions
         _my_build_stream = functools.partial(_stream_predict, client)
-        msg.submit(_my_build_stream, [kb_checkbox, msg, chatbot], [msg, chatbot, context, latest_response])
-        submit_btn.click(_my_build_stream, [kb_checkbox, msg, chatbot], [msg, chatbot, context, latest_response])
+        msg.submit(_my_build_stream, [kb_checkbox, msg, chatbot], [
+                   msg, chatbot, context, latest_response])
+        submit_btn.click(_my_build_stream, [kb_checkbox, msg, chatbot], [
+                         msg, chatbot, context, latest_response])
 
         tts_language_dropdown.change(
-            tts_utils.update_voice_dropdown, [tts_language_dropdown], [tts_voice_dropdown], api_name=False
+            tts_utils.update_voice_dropdown, [tts_language_dropdown], [
+                tts_voice_dropdown], api_name=False
         )
 
         audio_mic.start_recording(
-            asr_utils.start_recording, [audio_mic, asr_language_dropdown, state], [msg, state], api_name=False,
+            asr_utils.start_recording, [audio_mic, asr_language_dropdown, state], [
+                msg, state], api_name=False,
         )
-        audio_mic.stop_recording(asr_utils.stop_recording, [state], [state], api_name=False)
+        audio_mic.stop_recording(asr_utils.stop_recording, [
+                                 state], [state], api_name=False)
         audio_mic.stream(
-            asr_utils.transcribe_streaming, [audio_mic, asr_language_dropdown, state], [msg, state], api_name=False
+            asr_utils.transcribe_streaming, [
+                audio_mic, asr_language_dropdown, state], [msg, state], api_name=False
         )
         audio_mic.clear(lambda: "", [], [msg], api_name=False)
 
         latest_response.change(
             tts_utils.text_to_speech,
-            [latest_response, tts_language_dropdown, tts_voice_dropdown, tts_checkbox],
+            [latest_response, tts_language_dropdown,
+                tts_voice_dropdown, tts_checkbox],
             [output_audio],
             api_name=False,
         )
@@ -212,7 +229,8 @@ def _stream_predict(
     chunks = ""
     chat_history = chat_history or []
     _LOGGER.info(
-        "processing inference request - %s", str({"prompt": question, "use_knowledge_base": use_knowledge_base}),
+        "processing inference request - %s", str(
+            {"prompt": question, "use_knowledge_base": use_knowledge_base}),
     )
 
     documents: Union[None, List[Dict[str, Union[str, float]]]] = None
