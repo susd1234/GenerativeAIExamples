@@ -85,11 +85,18 @@ def build_page(client: chat_client.ChatClient) -> gr.Blocks:
 
         # chat logs
         with gr.Row(equal_height=True):
-            chatbot = gr.Chatbot(
-                scale=2, label=client.model_name, type="messages")
+            chatbot = gr.Chatbot(scale=2, label=client.model_name, type="messages")
             latest_response = gr.Textbox(visible=False)
             context = gr.JSON(scale=1, label="Knowledge Base Context",
                               visible=False, elem_id="contextbox",)
+            
+        # Add file upload component
+        with gr.Row():
+            file_upload = gr.File(
+                label="Upload PDF",
+                file_types=[".pdf"],
+                type="file"
+            )
 
         # TTS output box
         # visible so that users can stop or replay playback
