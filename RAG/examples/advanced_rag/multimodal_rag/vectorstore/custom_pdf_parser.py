@@ -53,7 +53,8 @@ def is_graph(image_path):
 def process_image(cb_handler, image_path):
     neva = LLMClient("ai-neva-22b", cb_handler=cb_handler)
     b64_string = get_b64_image(image_path)
-    res = neva.multimodal_invoke(b64_string, creativity=0, quality=9, complexity=0, verbosity=9).content
+    res = neva.multimodal_invoke(
+        b64_string, creativity=0, quality=9, complexity=0, verbosity=9).content
     print(res)
     return res
 
@@ -67,7 +68,8 @@ def process_graph(cb_handler, image_path):
     deplot_description = res.content
     # Accessing the model name environment variable
     settings = get_config()
-    mixtral = LLMClient(model_name=settings.llm.model_name, is_response_generator=True, cb_handler=cb_handler)
+    mixtral = LLMClient(model_name=settings.llm.model_name,
+                        is_response_generator=True, cb_handler=cb_handler)
     response = mixtral.chat_with_prompt(
         system_prompt=get_prompts().get("deplot_summarization_prompt", ""),
         prompt="Explain the following linearized table. " + deplot_description,
@@ -78,13 +80,31 @@ def process_graph(cb_handler, image_path):
     return full_response
 
 
-def stringify_table(table_text):
-    ans = ""
-    for i in range(len(table_text)):
-        for j in range(len(table_text[i])):
-            ans += table_text[i][j] + ","
-        ans += "\n"
-    return ans
+def stringify_table(table_data):
+    """Convert table data to a string representation"""
+    if not table_data:
+        return ""
+
+    # Filter out empty or None rows
+    table_data = [[str(cell).strip() if cell is not None else "" for cell in row]
+                  for row in table_data]
+    table_data = [row for row in table_data if any(cell != "" for cell in row)]
+
+    if not table_data:
+        return ""
+
+    # Get max width for each column for alignment
+    col_widths = [max(len(str(row[i])) for row in table_data)
+                  for i in range(len(table_data[0]))]
+
+    # Build table string
+    table_str = []
+    for row in table_data:
+        row_str = " | ".join(str(cell).ljust(width)
+                             for cell, width in zip(row, col_widths))
+        table_str.append(row_str)
+
+    return "\n".join(table_str)
 
 
 def text_to_table(table_text):
@@ -99,7 +119,8 @@ def text_to_table(table_text):
                 row.append(table_text[j][i])
             rows.append(row)
     except Exception as e:
-        print(f"Exception occured while converting extracted table text to Dataframe object : {e}")
+        print(
+            f"Exception occured while converting extracted table text to Dataframe object : {e}")
     return pd.DataFrame(rows, columns=columns)
 
 
@@ -112,8 +133,10 @@ def extract_text_around_item(text_blocks, bbox, page_height, threshold_percentag
     ) * threshold_percentage  # Assuming similar threshold for horizontal distance
 
     for block in text_blocks:
-        vertical_distance = min(abs(block['y1'] - bbox[1]), abs(block['y0'] - bbox[3]))
-        horizontal_overlap = max(0, min(block['x1'], bbox[3]) - max(block['x0'], bbox[0]))
+        vertical_distance = min(
+            abs(block['y1'] - bbox[1]), abs(block['y0'] - bbox[3]))
+        horizontal_overlap = max(
+            0, min(block['x1'], bbox[3]) - max(block['x0'], bbox[0]))
 
         # Check if within vertical threshold distance and has horizontal overlap or closeness
         if vertical_distance <= vertical_threshold_distance and horizontal_overlap >= -horizontal_threshold_distance:
@@ -132,7 +155,8 @@ def process_text_blocks(text_blocks):
     grouped_blocks = []
     current_char_count = 0
     for block in text_blocks:
-        if block['object_type'] in ('char', 'str'):  # Check if the block is of text type
+        # Check if the block is of text type
+        if block['object_type'] in ('char', 'str'):
             block_text = block['text']
             block_char_count = len(block_text)
 
@@ -141,7 +165,8 @@ def process_text_blocks(text_blocks):
                 current_char_count += block_char_count
             else:
                 if current_group:
-                    grouped_content = " ".join([b['text'] for b in current_group])
+                    grouped_content = " ".join(
+                        [b['text'] for b in current_group])
                     grouped_blocks.append((current_group[0], grouped_content))
                 current_group = [block]
                 current_char_count = block_char_count
@@ -160,7 +185,8 @@ def parse_via_ocr(filename, page, pagenum):
     imgrefpath = os.path.join("/tmp-data", "multimodal/ocr_references")
     if not os.path.exists(imgrefpath):
         os.makedirs(imgrefpath)
-    image_path = os.path.join(imgrefpath, f"file{os.path.basename(filename).split('.')[0]}-page{pagenum}.png")
+    image_path = os.path.join(
+        imgrefpath, f"file{os.path.basename(filename).split('.')[0]}-page{pagenum}.png")
     ocr_image.save(image_path)
     img = cv2.imread(image_path)
     ocr_text = pytesseract.image_to_string(img)
@@ -176,73 +202,49 @@ def parse_via_ocr(filename, page, pagenum):
         "page_num": pagenum,
     }
 
-    ocr_docs.append(Document(page_content="This is a page with text: " + ocr_text, metadata=ocr_metadata))
+    ocr_docs.append(Document(
+        page_content="This is a page with text: " + ocr_text, metadata=ocr_metadata))
     return ocr_docs
 
 
 def parse_all_tables(filename, page, pagenum, text_blocks, ongoing_tables):
     table_docs = []
     table_bboxes = []
-    ctr = 1
-    try:
-        tables = page.find_tables(
-            table_settings={"horizontal_strategy": "lines_strict", "vertical_strategy": "lines_strict"}
-        )
-    except Exception as e:
-        print(f"Error during table extraction: {e}")
-        return table_docs, table_bboxes, ongoing_tables
-    if tables:
-        for table_num, table in enumerate(tables, start=1):
-            try:
-                tablerefdir = os.path.join("/tmp-data", "vectorstore/table_references")
-                if not os.path.exists(tablerefdir):
-                    os.makedirs(tablerefdir)
-                df_xlsx_path = os.path.join(
-                    tablerefdir, f"file{os.path.basename(filename).split('.')[0]}-table{table_num}-page{pagenum}.xlsx"
-                )
-                page_crop = page.crop(table.bbox)
-                if len(page_crop.extract_tables()) > 0:
-                    table_df_text = page_crop.extract_tables()[0]
-                    table_df = text_to_table(table_df_text)
-                    table_df.to_excel(df_xlsx_path)
-                    # Find text around the table
-                    table_bbox = table.bbox
-                    before_text, after_text = extract_text_around_item(text_blocks, table_bbox, page.height)
-                    # Save table image
-                    table_img_path = os.path.join(
-                        tablerefdir,
-                        f"file{os.path.basename(filename).split('.')[0]}-table{table_num}-page{pagenum}.jpg",
-                    )
-                    img = page_crop.to_image(resolution=109)
-                    img.save(table_img_path)
-                    description = process_graph(table_img_path)
-                    ctr += 1
-                    caption = before_text.replace("\n", " ") + description + after_text.replace("\n", " ")
-                    if before_text == "" and after_text == "":
-                        caption = " ".join(table_df.columns)
-                    table_data_text = stringify_table(table_df_text)
-                    table_metadata = {
-                        "x1": 0,
-                        "y1": 0,
-                        "x2": 0,
-                        "x3": 0,
-                        "source": f"{os.path.basename(filename)}",
-                        "dataframe": df_xlsx_path,
-                        "image": table_img_path,
-                        "caption": caption,
-                        "type": "table",
-                        "page_num": pagenum + 1,
-                    }
-                    all_cols = ", ".join(list(table_df.columns.values))
-                    doc = Document(
-                        page_content="This is a table with the caption: "
-                        + caption
-                        + f"\nThe columns are {all_cols} and the table data is {table_data_text}",
-                        metadata=table_metadata,
-                    )
-                    table_docs.append(doc)
-            except:
-                print(f"Skipping Table {table_num} due to Exception {e}")
+
+    # Extract tables using pdfplumber's built-in table finder
+    tables = page.find_tables()
+
+    for table in tables:
+        # Get table bounds
+        bbox = (table.bbox[0], table.bbox[1], table.bbox[2], table.bbox[3])
+        table_bboxes.append(bbox)
+
+        # Extract table data
+        table_data = table.extract()
+
+        if table_data:
+            # Convert table to string representation
+            table_str = stringify_table(table_data)
+
+            # Find text around the table
+            before_text, after_text = extract_text_around_item(
+                text_blocks, bbox, page.height)
+
+            metadata = {
+                "x0": bbox[0],
+                "y0": bbox[1],
+                "x1": bbox[2],
+                "y1": bbox[3],
+                "source": f"{os.path.basename(filename)}",
+                "type": "table",
+                "page_num": pagenum,
+                "before_text": before_text,
+                "after_text": after_text
+            }
+
+            table_docs.append(
+                Document(page_content=table_str, metadata=metadata))
+
     return table_docs, table_bboxes, ongoing_tables
 
 
@@ -257,7 +259,8 @@ def parse_all_images(filename, page, pagenum, text_blocks):
         # if xref == 0:
         #     continue  # Skip inline images or undetectable images
         # image_bbox = (image['x0'], image['y0'], image['x1'], image['y1'])
-        image_bbox = (image['x0'], page.cropbox[3] - image['y1'], image['x1'], page.cropbox[3] - image['y0'])
+        image_bbox = (image['x0'], page.cropbox[3] - image['y1'],
+                      image['x1'], page.cropbox[3] - image['y0'])
         # Check if the image size is at least 5% of the page size in any dimension
         if image["width"] < page.width / 20 or image["height"] < page.height / 20:
             continue  # Skip very small images
@@ -273,7 +276,8 @@ def parse_all_images(filename, page, pagenum, text_blocks):
         )
         image_data.save(image_path)
         # Find text around the image
-        before_text, after_text = extract_text_around_item(text_blocks, image_bbox, page.height)
+        before_text, after_text = extract_text_around_item(
+            text_blocks, image_bbox, page.height)
 
         # Process the image if it's a graph
         image_description = " "
@@ -285,7 +289,8 @@ def parse_all_images(filename, page, pagenum, text_blocks):
         if before_text == "" and after_text == "":
             caption = image_description
         else:
-            caption = before_text.replace("\n", " ") + image_description + after_text.replace("\n", " ")
+            caption = before_text.replace(
+                "\n", " ") + image_description + after_text.replace("\n", " ")
 
         if caption == " ":
             continue
@@ -303,7 +308,8 @@ def parse_all_images(filename, page, pagenum, text_blocks):
         }
 
         image_docs.append(
-            Document(page_content="This is an image with the caption: " + caption, metadata=image_metadata)
+            Document(page_content="This is an image with the caption: " +
+                     caption, metadata=image_metadata)
         )
 
     return image_docs
@@ -327,8 +333,10 @@ def get_pdf_documents(filepath):
             footer_threshold = page_height * 0.9
 
             # Crop out page to remove footers and headers
-            page_crop = page.crop([0, header_threshold, page.width, footer_threshold])
-            text_blocks = [obj for obj in page_crop.chars if obj['object_type'] == 'char']
+            page_crop = page.crop(
+                [0, header_threshold, page.width, footer_threshold])
+            text_blocks = [
+                obj for obj in page_crop.chars if obj['object_type'] == 'char']
             grouped_text_blocks = process_text_blocks(text_blocks)
 
             if len(grouped_text_blocks) == 0:
@@ -342,17 +350,20 @@ def get_pdf_documents(filepath):
             page_docs.extend(table_docs)
 
             # Extract and process images
-            image_docs = parse_all_images(filepath, page, page_num, text_blocks)
+            image_docs = parse_all_images(
+                filepath, page, page_num, text_blocks)
             page_docs.extend(image_docs)
 
             # Process text blocks
             text_block_ctr = 0
             for heading_block, content in grouped_text_blocks:
                 text_block_ctr += 1
-                heading_bbox = (heading_block['x0'], heading_block['y0'], heading_block['x1'], heading_block['y1'])
+                heading_bbox = (
+                    heading_block['x0'], heading_block['y0'], heading_block['x1'], heading_block['y1'])
                 # Check if the heading or its content overlaps with table or image bounding boxes
                 if not any(is_bbox_overlapping(heading_bbox, table_bbox) for table_bbox in table_bboxes):
-                    bbox = {"x1": heading_bbox[0], "y1": heading_bbox[1], "x2": heading_bbox[2], "x3": heading_bbox[3]}
+                    bbox = {"x1": heading_bbox[0], "y1": heading_bbox[1],
+                            "x2": heading_bbox[2], "x3": heading_bbox[3]}
                     text_doc = Document(
                         page_content=f"{heading_block['text']}\n{content}",
                         metadata={
