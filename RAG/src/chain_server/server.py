@@ -370,7 +370,7 @@ async def generate_answer(request: Request, prompt: Prompt) -> StreamingResponse
     # Susan
     logger.info(" ")
     logger.info("************************************************************")
-    logger.info("* This is an NVIDIA PoV Development Work Done by Cognizant *")
+    logger.info("* This is an NVIDIA PoV Development Work *")
     logger.info("************************************************************")
     logger.info(" ")
     # Susan
