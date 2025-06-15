@@ -90,7 +90,7 @@ def parse_args() -> argparse.Namespace:
 if __name__ == "__main__":
     # Log an info message   --> msg
     logger.info("************************************************************")
-    logger.info("* This is an NVIDIA PoV Development Work Done by Cognizant *")
+    logger.info("* This is an NVIDIA PoV Development Work *")
     logger.info("************************************************************")
         
     args = parse_args()
